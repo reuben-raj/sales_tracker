@@ -1,11 +1,17 @@
 spring:
     datasource:
-        url: jdbc:postgresql://<awsrds>:5432/sales
-        username: developer
-        password: postgres
+        url: jdbc:postgresql://<PRODUCTION_DB_URL>:5432/sales
+        username: <PRODUCTION_DB_USERNAME>
+        password: <PRODUCTION_DB_PASSWORD>
     jpa:
         hibernate:
-            ddl-auto: validate
-    flyway:
-        enabled: true
-        locations: classpath:db/migration
+            ddl-auto: none
+        show-sql: false
+    security:
+        user:
+            username: produser
+            password: prodpassword
+    logging:
+        level:
+            org.springframework.web: INFO
+            org.springframework.security: INFO

@@ -1,12 +1,19 @@
 spring:
     datasource:
-        url: jdbc:postgresql://localhost:5432/sales
-        username: developer
+        url: jdbc:postgresql://localhost:5432/TESTDB
+        username: postgres
         password: postgres
     jpa:
         hibernate:
             ddl-auto: update
-        show-sql: true
-    flyway:
-        enabled: true
-        locations: classpath:db/migration
+        properties:
+            hibernate:
+                dialect: org.hibernate.dialect.PostgreSQLDialect
+    security:
+        user:
+            username: user
+            password: password
+    logging:
+        level:
+            org.springframework.web: DEBUG
+            org.springframework.security: DEBUG
