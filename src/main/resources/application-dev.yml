@@ -13,7 +13,19 @@ spring:
         user:
             username: user
             password: password
-    logging:
-        level:
-            org.springframework.web: DEBUG
-            org.springframework.security: DEBUG
+logging:
+    file:
+        path: ./target
+    level:
+        root: INFO
+        com.mbb.api.sales_tracker: INFO
+        org.springframework.web: INFO
+        org.springframework.security: INFO
+management:
+    endpoints:
+        web:
+            exposure:
+                include: "*"
+    endpoint:
+        metrics:
+            enabled: true
