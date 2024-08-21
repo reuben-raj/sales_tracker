@@ -14,6 +14,7 @@ Run and test locally:
 -   `./mvnw clean package` builds the application jar file for execution
 -   `./mvnw spring-boot:run -D"spring-boot.run.profiles=dev"` runs the application jar with dev configurations for local testing
     - The application will run on http://localhost:8080
+    - The log files can be found in the target folder of the project
 -   `docker compose up` spins up a local Docker instance 
     - A PostgreSQL database will be available on localhost:5432
 
