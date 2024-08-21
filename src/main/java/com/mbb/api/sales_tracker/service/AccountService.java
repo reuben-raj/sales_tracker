@@ -1,6 +1,9 @@
 package com.mbb.api.sales_tracker.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.mbb.api.sales_tracker.model.Account;
@@ -49,6 +52,11 @@ public class AccountService {
             return true;
         }
         return false;
+    }
+
+    public Page<Account> getAccounts(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return accountRepository.findAll(pageable);
     }
 
 }
