@@ -1,5 +1,6 @@
 package com.mbb.api.sales_tracker.controller;
 
+import java.net.URI;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,11 +61,15 @@ public class DeviceController {
             ResponseEntity<String> responseEntity = restTemplate.exchange(deviceDataUrl, HttpMethod.POST, requestEntity, String.class);
             // this API call will always redirect so we need to follow it
             if(responseEntity.getStatusCode().is3xxRedirection()){
-                String redirectUrl = responseEntity.getHeaders().getLocation().toString();
-                ResponseEntity<DeviceAPIResponseWrapper<DeviceListResponse>> redirectResponseEntity =
-                restTemplate.exchange(redirectUrl, HttpMethod.GET, new HttpEntity<>(headers),
-                        new ParameterizedTypeReference<DeviceAPIResponseWrapper<DeviceListResponse>>() {});
-                return DeviceAPIResponseHandler.handleDeviceResponse(redirectResponseEntity);
+                URI redirectUrl = responseEntity.getHeaders().getLocation();
+                if(redirectUrl != null) {
+                    ResponseEntity<DeviceAPIResponseWrapper<DeviceListResponse>> redirectResponseEntity =
+                    restTemplate.exchange(redirectUrl, HttpMethod.GET, new HttpEntity<>(headers),
+                            new ParameterizedTypeReference<DeviceAPIResponseWrapper<DeviceListResponse>>() {});
+                    return DeviceAPIResponseHandler.handleDeviceResponse(redirectResponseEntity);
+                } else {
+                    return ResponseEntity.notFound().build();
+                }
             } else {
                 return ResponseEntity.notFound().build();
             }

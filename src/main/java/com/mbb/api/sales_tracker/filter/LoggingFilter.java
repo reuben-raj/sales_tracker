@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -18,8 +19,12 @@ public class LoggingFilter extends OncePerRequestFilter {
     public static final Logger logger = LoggerFactory.getLogger(LoggingFilter.class);
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(
+        @NonNull HttpServletRequest request, 
+        @NonNull HttpServletResponse response, 
+        @NonNull FilterChain filterChain)
             throws ServletException, IOException {
+                
         String correlationId = UUID.randomUUID().toString();
         logRequest(request, correlationId);
         ResponseWrapper responseWrapper = new ResponseWrapper(response);

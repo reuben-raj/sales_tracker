@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -29,7 +28,9 @@ public class AccountController {
     private AccountService accountService;
 
     @GetMapping
-    public ResponseEntity<Page<Account>> getAllAccounts(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size){
+    public ResponseEntity<Page<Account>> getAllAccounts(
+        @RequestParam(defaultValue = "0") int page, 
+        @RequestParam(defaultValue = "10") int size){
         Page<Account> accounts = accountService.getAccounts(page, size);
         return ResponseEntity.ok(accounts);
     }
