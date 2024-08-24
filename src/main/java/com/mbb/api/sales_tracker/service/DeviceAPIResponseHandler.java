@@ -3,6 +3,8 @@ package com.mbb.api.sales_tracker.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -11,8 +13,11 @@ import com.mbb.api.sales_tracker.dto.BrandResponse;
 import com.mbb.api.sales_tracker.dto.Device;
 import com.mbb.api.sales_tracker.dto.DeviceAPIResponseWrapper;
 import com.mbb.api.sales_tracker.dto.DeviceListResponse;
+import com.mbb.api.sales_tracker.dto.DeviceResponse;
 
 public class DeviceAPIResponseHandler {
+    
+    static Logger logger = LoggerFactory.getLogger(DeviceAPIResponseHandler.class);
 
     public static ResponseEntity<?> handleBrandResponse(ResponseEntity<DeviceAPIResponseWrapper<List<BrandResponse>>> responseEntity) {
         DeviceAPIResponseWrapper<List<BrandResponse>> responseBody = responseEntity.getBody();
@@ -49,7 +54,16 @@ public class DeviceAPIResponseHandler {
         }
 
         DeviceListResponse deviceListResponse = responseBody.getData();
-        List<Device> devices = deviceListResponse.getDevices();
+        List<DeviceResponse> deviceResponses = deviceListResponse.getDeviceList();
+        List<Device> devices = deviceResponses.stream()
+                .map(deviceResponse -> {
+                    Device device = new Device();
+                    device.setDeviceName(deviceResponse.getDeviceName());
+                    device.setDeviceImage(deviceResponse.getDeviceImage());
+                    device.setKey(deviceResponse.getKey());
+                    return device;
+                })
+                .collect(Collectors.toList());
 
         return ResponseEntity.ok(devices);
     }

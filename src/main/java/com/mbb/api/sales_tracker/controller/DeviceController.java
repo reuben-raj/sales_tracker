@@ -8,15 +8,14 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import com.mbb.api.sales_tracker.dto.Brand;
 import com.mbb.api.sales_tracker.dto.BrandResponse;
-import com.mbb.api.sales_tracker.dto.Device;
 import com.mbb.api.sales_tracker.dto.DeviceAPIResponseWrapper;
 import com.mbb.api.sales_tracker.dto.DeviceListResponse;
 import com.mbb.api.sales_tracker.model.DeviceRequest;
@@ -25,7 +24,6 @@ import com.mbb.api.sales_tracker.service.DeviceAPIResponseHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-
 
 @RestController
 @RequestMapping("/device")
@@ -49,20 +47,31 @@ public class DeviceController {
         ResponseEntity<DeviceAPIResponseWrapper<List<BrandResponse>>> responseEntity =
             restTemplate.exchange(url, HttpMethod.GET, null,
                     new ParameterizedTypeReference<DeviceAPIResponseWrapper<List<BrandResponse>>>() {});
-    return DeviceAPIResponseHandler.handleBrandResponse(responseEntity);
+        return DeviceAPIResponseHandler.handleBrandResponse(responseEntity);
     }
     
     @PostMapping("/search")
     public ResponseEntity<?> searchDevices(@RequestBody DeviceRequest deviceRequest) {
-        logger.info("Calling search API with URL: {}", deviceDataUrl);
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/json");
         HttpEntity<DeviceRequest> requestEntity = new HttpEntity<>(deviceRequest, headers);
 
-        ResponseEntity<DeviceAPIResponseWrapper<DeviceListResponse>> responseEntity =
-                restTemplate.exchange(deviceDataUrl, HttpMethod.POST, requestEntity,
+        try {
+            ResponseEntity<String> responseEntity = restTemplate.exchange(deviceDataUrl, HttpMethod.POST, requestEntity, String.class);
+            // this API call will always redirect so we need to follow it
+            if(responseEntity.getStatusCode().is3xxRedirection()){
+                String redirectUrl = responseEntity.getHeaders().getLocation().toString();
+                ResponseEntity<DeviceAPIResponseWrapper<DeviceListResponse>> redirectResponseEntity =
+                restTemplate.exchange(redirectUrl, HttpMethod.GET, new HttpEntity<>(headers),
                         new ParameterizedTypeReference<DeviceAPIResponseWrapper<DeviceListResponse>>() {});
-        return DeviceAPIResponseHandler.handleDeviceResponse(responseEntity);
+                return DeviceAPIResponseHandler.handleDeviceResponse(redirectResponseEntity);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch(Exception e) {
+            logger.error("Error during API call: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal Server Error");
+        }
     }
 
 }
