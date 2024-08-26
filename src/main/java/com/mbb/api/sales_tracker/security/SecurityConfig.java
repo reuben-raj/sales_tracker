@@ -16,7 +16,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(crsf -> crsf.disable())
         .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
         .httpBasic(Customizer.withDefaults());
@@ -25,7 +25,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService() {
+    UserDetailsService userDetailsService() {
         UserDetails user = User.builder()
         .username("user")
         .password(passwordEncoder().encode("password"))
@@ -35,7 +35,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
+    PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
