@@ -21,12 +21,14 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.mbb.api.sales_tracker.model.Account;
 import com.mbb.api.sales_tracker.service.AccountService;
 
 @WebMvcTest(AccountController.class)
+@ActiveProfiles("unit")
 public class AccountControllerTest {
 
     @MockBean

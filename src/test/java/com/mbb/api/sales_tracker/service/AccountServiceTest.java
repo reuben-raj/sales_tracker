@@ -22,12 +22,14 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 import com.mbb.api.sales_tracker.model.Account;
 import com.mbb.api.sales_tracker.repository.AccountRepository;
 
+@ActiveProfiles("unit")
 public class AccountServiceTest {
 
     @Mock
