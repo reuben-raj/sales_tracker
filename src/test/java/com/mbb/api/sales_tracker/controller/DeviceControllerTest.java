@@ -25,6 +25,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.mbb.api.sales_tracker.dto.Brand;
@@ -179,7 +180,14 @@ public class DeviceControllerTest {
         assertEquals(1, data.size());
         assertEquals("iPhone 11", data.get(0).getDeviceName());
 
-        // ResponseEntity<String> responseEntityWithoutLocation = new ResponseEntity<>(HttpStatus.FOUND);
+        ResponseEntity<String> responseEntityWithoutLocation = new ResponseEntity<>(HttpStatus.FOUND);
+        when(restTemplate.exchange(eq(DEVICE_DATA_URL), eq(HttpMethod.POST), any(HttpEntity.class), eq(String.class)))
+        .thenReturn(responseEntityWithoutLocation);
+
+        response = deviceController.searchDevices(deviceRequest);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals(null, response.getBody());
     }
 
     @Test
@@ -201,19 +209,34 @@ public class DeviceControllerTest {
     }
 
     @Test
-    void testSearchDevicesInternalServerError() {
+    void testSearchDevicesNot3xxResponse() {
         DeviceRequest deviceRequest = new DeviceRequest();
         deviceRequest.setBrand_id(1);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
+        ResponseEntity<String> nonRedirectResponseEntity = ResponseEntity.status(HttpStatus.OK).build();
+
         when(restTemplate.exchange(eq(DEVICE_DATA_URL), eq(HttpMethod.POST), any(HttpEntity.class), eq(String.class)))
-        .thenThrow(new RuntimeException("Simulated Server Error"));
+        .thenReturn(nonRedirectResponseEntity);
 
         ResponseEntity<?> response = deviceController.searchDevices(deviceRequest);
 
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertEquals("Internal Server Error", response.getBody());
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    void testSearchDevicesRestClientException() {
+        DeviceRequest deviceRequest = new DeviceRequest();
+        deviceRequest.setBrand_id(1);
+
+        when(restTemplate.exchange(eq(DEVICE_DATA_URL), eq(HttpMethod.POST), any(HttpEntity.class), eq(String.class)))
+        .thenThrow(new RestClientException("Client Error"));
+
+        ResponseEntity<?> responseEntity = deviceController.searchDevices(deviceRequest);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, responseEntity.getStatusCode());
+        assertEquals("Internal Server Error", responseEntity.getBody());
     }
 }
