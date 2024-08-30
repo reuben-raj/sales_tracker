@@ -90,6 +90,7 @@ public class DeviceControllerTest {
         List<Brand> data = (List<Brand>) response.getBody();
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(1, data.get(0).getBrandId());
         assertEquals("Nokia", data.get(0).getBrandName());
     }
 
