@@ -1,6 +1,8 @@
 package com.mbb.api.sales_tracker.model;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -8,6 +10,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -21,7 +24,7 @@ public class Brand {
     @Column(name = "brand_name")
     private String brandName;
 
-    @Column(name = "key")
+    @Column(name = "`key`")
     private String key;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -37,6 +40,9 @@ public class Brand {
 
     @Column(name = "updated_by", nullable = false)
     private Long updatedBy;
+
+    @OneToMany(mappedBy = "brand")
+    private List<Device> devices = new ArrayList<>();
 
     public int getId() {
         return id;
@@ -92,6 +98,14 @@ public class Brand {
 
     public void setUpdatedBy(Long updatedBy) {
         this.updatedBy = updatedBy;
+    }
+
+    public List<Device> getDevices() {
+        return devices;
+    }
+
+    public void setDevices(List<Device> devices) {
+        this.devices = devices;
     }
 
 }

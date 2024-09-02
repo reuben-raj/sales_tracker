@@ -17,8 +17,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.mbb.api.sales_tracker.dto.BrandResponse;
 import com.mbb.api.sales_tracker.dto.DeviceAPIResponseWrapper;
+import com.mbb.api.sales_tracker.dto.DeviceResponse;
 import com.mbb.api.sales_tracker.model.Brand;
+import com.mbb.api.sales_tracker.model.Device;
 import com.mbb.api.sales_tracker.repository.BrandRepository;
+import com.mbb.api.sales_tracker.repository.DeviceRepository;
 
 @Service
 public class DeviceService {
@@ -34,10 +37,12 @@ public class DeviceService {
     @Autowired
     private BrandRepository brandRepository;
 
-    public List<Brand> getBrands() {
-        logger.info("Reached DeviceService getBrands");
-        List<Brand> brands = new ArrayList<>();
+    @Autowired
+    private DeviceRepository deviceRepository;
 
+    public List<Brand> getBrands() {
+        List<Brand> brands = new ArrayList<>();
+        brands = brandRepository.findAll();
         return brands;
     }
 
@@ -52,7 +57,6 @@ public class DeviceService {
                     new ParameterizedTypeReference<DeviceAPIResponseWrapper<List<BrandResponse>>>() {});
         
         List<BrandResponse> brandResponses = responseEntity.getBody().getData();
-        logger.info("getBrandsFromSource brandResponses size "+brandResponses.size());
 
         for(BrandResponse brandResponse : brandResponses) {
             if(StringUtils.hasLength(brandResponse.getBrandName()) 
@@ -77,6 +81,57 @@ public class DeviceService {
         brandRepository.saveAll(brands);
 
         return brands;
+    }
+
+    public List<Device> getDevices() {
+        List<Device> devices = new ArrayList<>();
+        devices = deviceRepository.findAll();
+        return devices;
+    }
+
+    public List<Device> getDevicesFromSource() {
+        List<Device> devices = new ArrayList<>();
+        
+        String url = UriComponentsBuilder.fromHttpUrl(deviceDataUrl)
+            .queryParam("route", "device-list")
+            .toUriString();
+        ResponseEntity<DeviceAPIResponseWrapper<List<BrandResponse>>> responseEntity =
+            restTemplate.exchange(url, HttpMethod.GET, null,
+                    new ParameterizedTypeReference<DeviceAPIResponseWrapper<List<BrandResponse>>>() {});
+        
+        List<BrandResponse> brandResponses = responseEntity.getBody().getData();
+
+        for(BrandResponse brandResponse : brandResponses) {
+            Brand brand = brandRepository.findById(brandResponse.getBrandId()).orElse(null);
+            
+            if(brand != null){
+                List<DeviceResponse> deviceResponses = brandResponse.getDeviceList();
+
+                for(DeviceResponse deviceResponse : deviceResponses) {
+                    if(StringUtils.hasLength(deviceResponse.getDeviceName()) 
+                        && StringUtils.hasLength(deviceResponse.getKey())) {
+                        Device device = new Device();
+                        device.setId(deviceResponse.getDeviceId());
+                        device.setDeviceName(deviceResponse.getDeviceName());
+                        device.setDeviceType(deviceResponse.getDeviceType());
+                        device.setDeviceImageUrl(deviceResponse.getDeviceImage());
+                        device.setKey(deviceResponse.getKey());
+                        device.setCreatedBy((long) 1);
+                        device.setUpdatedBy((long) 1);
+                        device.setBrand(brand);
+                        devices.add(device);
+                    }
+                }
+            }
+        }
+        return devices;
+    }
+
+    public List<Device> updateDevicesFromSource() {
+        List<Device> devices = new ArrayList<>();
+        devices = getDevicesFromSource();
+        deviceRepository.saveAll(devices);
+        return devices;
     }
 
 }

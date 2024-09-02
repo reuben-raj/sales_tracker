@@ -5,11 +5,13 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -18,16 +20,18 @@ public class Device {
 
     @Id
     @Column(name = "id")
-    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
     @Column(name = "device_name")
     private String deviceName;
 
+    @Column(name = "device_type")
+    private String deviceType;
+
     @Column(name = "device_image_url")
     private String deviceImageUrl;
 
-    @Column(name = "key")
+    @Column(name = "`key`")
     private String key;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -44,6 +48,11 @@ public class Device {
     @Column(name = "updated_by", nullable = false)
     private Long updatedBy;
 
+    @ManyToOne
+    @JoinColumn(name = "brand_id", nullable = false)
+    @JsonIgnore
+    private Brand brand;
+
     public Long getId() {
         return id;
     }
@@ -58,6 +67,14 @@ public class Device {
 
     public void setDeviceName(String deviceName) {
         this.deviceName = deviceName;
+    }
+
+    public String getDeviceType() {
+        return deviceType;
+    }
+
+    public void setDeviceType(String deviceType) {
+        this.deviceType = deviceType;
     }
 
     public String getDeviceImageUrl() {
@@ -106,6 +123,14 @@ public class Device {
 
     public void setUpdatedBy(Long updatedBy) {
         this.updatedBy = updatedBy;
+    }
+
+    public Brand getBrand() {
+        return brand;
+    }
+
+    public void setBrand(Brand brand) {
+        this.brand = brand;
     }
 
 }

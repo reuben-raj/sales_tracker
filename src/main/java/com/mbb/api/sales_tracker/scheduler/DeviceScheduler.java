@@ -22,4 +22,10 @@ public class DeviceScheduler {
         deviceService.updateBrandsFromSource();
     }
 
+    // @Scheduled(fixedRateString = "${scheduler.devices.rate}")
+    @Scheduled(cron = "${scheduler.devices.expression}")
+    public void updateDevices() {
+        deviceService.updateDevicesFromSource();
+    }
+
 }

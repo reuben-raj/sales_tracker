@@ -22,3 +22,5 @@ logging:
 scheduler:
     brands:
         expression: "0 00 00 * * *"
+    devices:
+        expression: "0 05 00 * * *"
