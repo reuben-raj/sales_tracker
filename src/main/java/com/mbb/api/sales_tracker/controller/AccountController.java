@@ -34,7 +34,7 @@ public class AccountController {
     @GetMapping
     public ResponseEntity<Page<Account>> getAllAccounts(
         @RequestParam(defaultValue = "0") int page, 
-        @RequestParam(defaultValue = "10") int size){
+        @RequestParam(defaultValue = "10") int size) {
         Page<Account> accounts = accountService.getAccounts(page, size);
         return ResponseEntity.ok(accounts);
     }

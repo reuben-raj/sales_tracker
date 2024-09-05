@@ -1,14 +1,22 @@
 package com.mbb.api.sales_tracker.service;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -17,6 +25,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.mbb.api.sales_tracker.dto.BrandResponse;
 import com.mbb.api.sales_tracker.dto.DeviceAPIResponseWrapper;
+import com.mbb.api.sales_tracker.dto.DeviceListResponse;
+import com.mbb.api.sales_tracker.dto.DeviceRequest;
 import com.mbb.api.sales_tracker.dto.DeviceResponse;
 import com.mbb.api.sales_tracker.model.Brand;
 import com.mbb.api.sales_tracker.model.Device;
@@ -40,10 +50,9 @@ public class DeviceService {
     @Autowired
     private DeviceRepository deviceRepository;
 
-    public List<Brand> getBrands() {
-        List<Brand> brands = new ArrayList<>();
-        brands = brandRepository.findAll();
-        return brands;
+    public Page<Brand> getBrands(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return brandRepository.findAll(pageable);
     }
 
     public List<Brand> getBrandsFromSource() {
@@ -83,10 +92,9 @@ public class DeviceService {
         return brands;
     }
 
-    public List<Device> getDevices() {
-        List<Device> devices = new ArrayList<>();
-        devices = deviceRepository.findAll();
-        return devices;
+    public Page<Device> getDevices(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return deviceRepository.findAll(pageable);
     }
 
     public List<Device> getDevicesFromSource() {
@@ -132,6 +140,49 @@ public class DeviceService {
         devices = getDevicesFromSource();
         deviceRepository.saveAll(devices);
         return devices;
+    }
+
+    public List<Device> searchDevices(DeviceRequest deviceRequest) {
+        List<Device> devices = new ArrayList<>();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Content-Type", "application/json");
+        HttpEntity<DeviceRequest> requestEntity = new HttpEntity<>(deviceRequest, headers);
+
+        try {
+            ResponseEntity<String> responseEntity = restTemplate.exchange(deviceDataUrl, HttpMethod.POST, requestEntity, String.class);
+            // this API call will always redirect so we need to follow it
+            if(responseEntity.getStatusCode().is3xxRedirection() && responseEntity.getHeaders().getLocation() != null){
+                URI redirectUrl = responseEntity.getHeaders().getLocation();
+                ResponseEntity<DeviceAPIResponseWrapper<DeviceListResponse>> redirectResponseEntity =
+                    restTemplate.exchange(redirectUrl, HttpMethod.GET, new HttpEntity<>(headers),
+                            new ParameterizedTypeReference<DeviceAPIResponseWrapper<DeviceListResponse>>() {});
+                
+                DeviceAPIResponseWrapper<DeviceListResponse> responseBody = redirectResponseEntity.getBody();
+                if (responseBody == null || redirectResponseEntity.getStatusCode() != HttpStatus.OK) {
+                    throw new RuntimeException("Failed to search devices");
+                }
+                if (responseBody.getStatus() != 200) {
+                    throw new RuntimeException("Error from third-party service");
+                }
+
+                DeviceListResponse deviceListResponse = responseBody.getData();
+                List<DeviceResponse> deviceResponses = deviceListResponse.getDeviceList();
+                devices = deviceResponses.stream()
+                        .map(deviceResponse -> {
+                            Device device = new Device();
+                            device.setDeviceName(deviceResponse.getDeviceName());
+                            device.setDeviceImageUrl(deviceResponse.getDeviceImage());
+                            device.setKey(deviceResponse.getKey());
+                            return device;
+                        })
+                        .collect(Collectors.toList());
+            }
+            return devices;
+        } catch(Exception e) {
+            logger.error("Error during API call: ", e);
+            throw new RuntimeException("Failed to search devices");
+        }
     }
 
 }

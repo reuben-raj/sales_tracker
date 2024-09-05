@@ -1,243 +1,153 @@
 package com.mbb.api.sales_tracker.controller;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.net.URI;
-import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
-import com.mbb.api.sales_tracker.dto.Brand;
-import com.mbb.api.sales_tracker.dto.BrandResponse;
-import com.mbb.api.sales_tracker.dto.Device;
-import com.mbb.api.sales_tracker.dto.DeviceAPIResponseWrapper;
-import com.mbb.api.sales_tracker.dto.DeviceListResponse;
-import com.mbb.api.sales_tracker.dto.DeviceResponse;
-import com.mbb.api.sales_tracker.model.DeviceRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mbb.api.sales_tracker.dto.DeviceRequest;
+import com.mbb.api.sales_tracker.model.Brand;
+import com.mbb.api.sales_tracker.model.Device;
+import com.mbb.api.sales_tracker.service.DeviceService;
 
 @WebMvcTest(DeviceController.class)
 @ActiveProfiles("unit")
 public class DeviceControllerTest {
 
-    private static final String DEVICE_DATA_URL = "https://script.google.com/macros/s/AKfycbxNu27V2Y2LuKUIQMK8lX1y0joB6YmG6hUwB1fNeVbgzEh22TcDGrOak03Fk3uBHmz-/exec";
-
     @MockBean
-    private RestTemplate restTemplate;
+    private DeviceService deviceService;
 
     @Autowired
-    private DeviceController deviceController;
+    private MockMvc mockMvc;
 
-    @TestConfiguration
-    static class TestConfig {
-        @Bean
-        public RestTemplate restTemplate() {
-            return new RestTemplate();
-        }
-
-        @Bean
-        public String deviceDataUrl() {
-            return DEVICE_DATA_URL;
-        }
-    }
+    private List<Brand> brands;
+    private List<Device> devices;
 
     @BeforeEach
     void setup() {
-        MockitoAnnotations.openMocks(this);
+        Brand brand1 = new Brand();
+        brand1.setId(1);
+        brand1.setBrandName("Nokia");
+        brand1.setKey("nokia");
+
+        Brand brand2 = new Brand();
+        brand2.setId(2);
+        brand2.setBrandName("iPhone");
+        brand2.setKey("iphone");
+
+        brands = List.of(brand1, brand2);
+
+        Device device1 = new Device();
+        device1.setId((long) 1);
+        device1.setDeviceName("Nokia 5");
+        device1.setDeviceType("nokia5");
+
+        Device device2 = new Device();
+        device2.setId((long) 2);
+        device2.setDeviceName("iPhone 11");
+        device2.setDeviceType("iphone-11");
+
+        devices = List.of(device1, device2);
     }
 
     @Test
+    @WithMockUser(username = "user", roles = "USER")
     void testGetAllBrands() throws Exception {
-        String url = DEVICE_DATA_URL + "?route=brand-list";
-        BrandResponse brandResponse = new BrandResponse();
-        brandResponse.setBrandId(1);
-        brandResponse.setBrandName("Nokia");
-        brandResponse.setKey("nokia");
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Brand> page = new PageImpl<>(brands, pageable, 2);
 
-        DeviceAPIResponseWrapper<List<BrandResponse>> mockResponse = new DeviceAPIResponseWrapper<>();
-        mockResponse.setStatus(200);
-        mockResponse.setMessage("Success");
-        mockResponse.setData(Arrays.asList(brandResponse));
+        when(deviceService.getBrands(0, 10)).thenReturn(page);
 
-        ResponseEntity<DeviceAPIResponseWrapper<List<BrandResponse>>> responseEntity = 
-            new ResponseEntity<>(mockResponse, HttpStatus.OK);
-        
-        when(restTemplate.exchange(eq(url), eq(HttpMethod.GET), any(), 
-            eq(new ParameterizedTypeReference<DeviceAPIResponseWrapper<List<BrandResponse>>>() {})))
-            .thenReturn(responseEntity);
-
-        ResponseEntity<?> response = deviceController.getAllBrands();
-        List<Brand> data = (List<Brand>) response.getBody();
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(1, data.get(0).getBrandId());
-        assertEquals("Nokia", data.get(0).getBrandName());
+        mockMvc.perform(get("/device/brands").contentType(MediaType.APPLICATION_JSON).with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].brandName").value("Nokia"))
+            .andExpect(jsonPath("$.content[0].key").value("nokia"))
+            .andExpect(jsonPath("$.content[1].brandName").value("iPhone"))
+            .andExpect(jsonPath("$.content[1].key").value("iphone"));
     }
 
     @Test
-    void testSearchDevices() {
-        DeviceRequest deviceRequest = new DeviceRequest();
-        deviceRequest.setBrand_id(1);
-        
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+    @WithMockUser(username = "user", roles = "USER")
+    void getAllDevices() throws Exception {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Device> page = new PageImpl<>(devices, pageable, 2);
 
-        ResponseEntity<String> initialResponseEntity = ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create("https://redirect-url.com"))
-                .build();
+        when(deviceService.getDevices(0, 10)).thenReturn(page);
 
-        when(restTemplate.exchange(eq(DEVICE_DATA_URL), eq(HttpMethod.POST), any(HttpEntity.class), eq(String.class)))
-        .thenReturn(initialResponseEntity);
-
-        DeviceResponse deviceResponse = new DeviceResponse();
-        deviceResponse.setDeviceName("iPhone 11");
-        deviceResponse.setDeviceImage("https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-11.jpg");
-        deviceResponse.setKey("apple_iphone_11-9848");
-
-        DeviceListResponse deviceListResponse = new DeviceListResponse();
-        deviceListResponse.setDeviceList(Arrays.asList(deviceResponse));
-        deviceListResponse.setTotalPage(1);
-
-        DeviceAPIResponseWrapper<DeviceListResponse> mockRedirectResponse = new DeviceAPIResponseWrapper<>();
-        mockRedirectResponse.setStatus(200);
-        mockRedirectResponse.setMessage("Success");
-        mockRedirectResponse.setData(deviceListResponse);
-
-        ResponseEntity<DeviceAPIResponseWrapper<DeviceListResponse>> redirectResponseEntity = 
-            new ResponseEntity<>(mockRedirectResponse, HttpStatus.OK);
-        
-        when(restTemplate.exchange(eq(URI.create("https://redirect-url.com")), eq(HttpMethod.GET), any(HttpEntity.class), 
-            eq(new ParameterizedTypeReference<DeviceAPIResponseWrapper<DeviceListResponse>>() {})))
-        .thenReturn(redirectResponseEntity);
-        
-        ResponseEntity<?> response = deviceController.searchDevices(deviceRequest);
-        List<Device> data = (List<Device>) response.getBody();
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(1, data.size());
-        assertEquals("iPhone 11", data.get(0).getDeviceName());
-        assertEquals("https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-11.jpg", data.get(0).getDeviceImage());
-        assertEquals("apple_iphone_11-9848", data.get(0).getKey());
+        mockMvc.perform(get("/device/devices").contentType(MediaType.APPLICATION_JSON).with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].deviceName").value("Nokia 5"))
+            .andExpect(jsonPath("$.content[0].deviceType").value("nokia5"))
+            .andExpect(jsonPath("$.content[1].deviceName").value("iPhone 11"))
+            .andExpect(jsonPath("$.content[1].deviceType").value("iphone-11"));
     }
 
     @Test
-    void testSearchDevicesRedirect() {
+    @WithMockUser(username = "user", roles = "USER")
+    void testSearchDevices() throws Exception {
         DeviceRequest deviceRequest = new DeviceRequest();
         deviceRequest.setBrand_id(1);
-
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.setLocation(URI.create("https://redirect-url.com"));
-
-        ResponseEntity<String> initialResponseEntity = new ResponseEntity<>(httpHeaders, HttpStatus.FOUND);
         
-        DeviceResponse deviceResponse = new DeviceResponse();
-        deviceResponse.setDeviceName("iPhone 11");
-        deviceResponse.setDeviceImage("https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-11.jpg");
-        deviceResponse.setKey("apple_iphone_11-9848");
+        when(deviceService.searchDevices(any(DeviceRequest.class))).thenReturn(devices);
+
+        mockMvc.perform(post("/device/search")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(deviceRequest))
+                .with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].deviceName").value("Nokia 5"))
+            .andExpect(jsonPath("$[1].deviceName").value("iPhone 11"));
+    }
+
+    @Test
+    @WithMockUser(username = "user", roles = "USER")
+    void testSearchDevicesNotFound() throws Exception {
+        DeviceRequest deviceRequest = new DeviceRequest();
+        deviceRequest.setBrand_name("Unknown");
         
-        DeviceListResponse deviceListResponse = new DeviceListResponse();
-        deviceListResponse.setDeviceList(Arrays.asList(deviceResponse));
-        deviceListResponse.setTotalPage(1);
+        when(deviceService.searchDevices(any(DeviceRequest.class))).thenReturn(List.of());
 
-        DeviceAPIResponseWrapper<DeviceListResponse> redirectedResponseWrapper = new DeviceAPIResponseWrapper<>();
-        redirectedResponseWrapper.setStatus(200);
-        redirectedResponseWrapper.setMessage("Success");
-        redirectedResponseWrapper.setData(deviceListResponse);
-
-        ResponseEntity<DeviceAPIResponseWrapper<DeviceListResponse>> redirectedResponseEntity = 
-            new ResponseEntity<>(redirectedResponseWrapper, HttpStatus.OK);
-
-        when(restTemplate.exchange(eq(DEVICE_DATA_URL), eq(HttpMethod.POST), any(HttpEntity.class), eq(String.class)))
-        .thenReturn(initialResponseEntity);
-
-        when(restTemplate.exchange(eq(URI.create("https://redirect-url.com")), eq(HttpMethod.GET), any(HttpEntity.class), 
-            eq(new ParameterizedTypeReference<DeviceAPIResponseWrapper<DeviceListResponse>>() {})))
-        .thenReturn(redirectedResponseEntity);
-
-        ResponseEntity<?> response = deviceController.searchDevices(deviceRequest);
-        List<Device> data = (List<Device>) response.getBody();
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(1, data.size());
-        assertEquals("iPhone 11", data.get(0).getDeviceName());
-
-        ResponseEntity<String> responseEntityWithoutLocation = new ResponseEntity<>(HttpStatus.FOUND);
-        when(restTemplate.exchange(eq(DEVICE_DATA_URL), eq(HttpMethod.POST), any(HttpEntity.class), eq(String.class)))
-        .thenReturn(responseEntityWithoutLocation);
-
-        response = deviceController.searchDevices(deviceRequest);
-
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        assertEquals(null, response.getBody());
+        mockMvc.perform(post("/device/search")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(deviceRequest))
+                .with(csrf()))
+            .andExpect(status().isNotFound());
     }
 
     @Test
-    void testSearchDevicesMissingRedirectURL() {
+    @WithMockUser(username = "user", roles = "USER")
+    void testSearchDevicesRestClientException() throws Exception {
         DeviceRequest deviceRequest = new DeviceRequest();
         deviceRequest.setBrand_id(1);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        ResponseEntity<String> initiResponseEntity = ResponseEntity.status(HttpStatus.FOUND).build();
-
-        when(restTemplate.exchange(eq(DEVICE_DATA_URL), eq(HttpMethod.POST), any(HttpEntity.class), eq(String.class)))
-        .thenReturn(initiResponseEntity);
-
-        ResponseEntity<?> response = deviceController.searchDevices(deviceRequest);
-
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-    }
-
-    @Test
-    void testSearchDevicesNot3xxResponse() {
-        DeviceRequest deviceRequest = new DeviceRequest();
-        deviceRequest.setBrand_id(1);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        ResponseEntity<String> nonRedirectResponseEntity = ResponseEntity.status(HttpStatus.OK).build();
-
-        when(restTemplate.exchange(eq(DEVICE_DATA_URL), eq(HttpMethod.POST), any(HttpEntity.class), eq(String.class)))
-        .thenReturn(nonRedirectResponseEntity);
-
-        ResponseEntity<?> response = deviceController.searchDevices(deviceRequest);
-
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-    }
-
-    @Test
-    void testSearchDevicesRestClientException() {
-        DeviceRequest deviceRequest = new DeviceRequest();
-        deviceRequest.setBrand_id(1);
-
-        when(restTemplate.exchange(eq(DEVICE_DATA_URL), eq(HttpMethod.POST), any(HttpEntity.class), eq(String.class)))
+        when(deviceService.searchDevices(any(DeviceRequest.class)))
         .thenThrow(new RestClientException("Client Error"));
 
-        ResponseEntity<?> responseEntity = deviceController.searchDevices(deviceRequest);
-
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, responseEntity.getStatusCode());
-        assertEquals("Internal Server Error", responseEntity.getBody());
+        mockMvc.perform(post("/device/search")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(new ObjectMapper().writeValueAsString(deviceRequest))
+                .with(csrf()))
+        .andExpect(status().isInternalServerError());
     }
 }

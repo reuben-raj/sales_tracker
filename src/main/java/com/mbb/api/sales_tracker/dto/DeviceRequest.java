@@ -1,4 +1,4 @@
-package com.mbb.api.sales_tracker.model;
+package com.mbb.api.sales_tracker.dto;
 
 public class DeviceRequest {
     private String route;
