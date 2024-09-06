@@ -25,3 +25,10 @@ management:
     endpoint:
         metrics:
             enabled: true
+scheduler:
+    brands:
+        expression: "0 00 00 * * *"
+        rate: 30000
+    devices:
+        expression: "0 05 00 * * *"
+        rate: 60000

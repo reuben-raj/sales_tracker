@@ -1,5 +1,7 @@
 package com.mbb.api.sales_tracker.dto;
 
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class BrandResponse {
@@ -11,6 +13,9 @@ public class BrandResponse {
 
     @JsonProperty("key")
     private String key;
+
+    @JsonProperty("device_list")
+    private List<DeviceResponse> deviceList;
 
     public int getBrandId() {
         return brandId;
@@ -34,6 +39,14 @@ public class BrandResponse {
 
     public void setKey(String key) {
         this.key = key;
+    }
+
+    public List<DeviceResponse> getDeviceList() {
+        return deviceList;
+    }
+
+    public void setDeviceList(List<DeviceResponse> deviceList) {
+        this.deviceList = deviceList;
     }
 
 }

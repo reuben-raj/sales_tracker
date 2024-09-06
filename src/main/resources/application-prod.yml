@@ -19,3 +19,8 @@ logging:
         com.mbb.api.sales_tracker: INFO
         org.springframework.web: INFO
         org.springframework.security: INFO
+scheduler:
+    brands:
+        expression: "0 00 00 * * *"
+    devices:
+        expression: "0 05 00 * * *"
