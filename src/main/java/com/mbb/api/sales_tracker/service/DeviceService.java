@@ -38,17 +38,19 @@ public class DeviceService {
 
     Logger logger = LoggerFactory.getLogger(DeviceService.class);
 
-    @Value("${device.datasource.url}")
-    private String deviceDataUrl;
-
-    @Autowired
-    private RestTemplate restTemplate;
+    private final String deviceDataUrl;
+    private final RestTemplate restTemplate;
 
     @Autowired
     private BrandRepository brandRepository;
 
     @Autowired
     private DeviceRepository deviceRepository;
+
+    public DeviceService(@Value("${device.datasource.url}") String deviceDataUrl, RestTemplate restTemplate) {
+        this.deviceDataUrl = deviceDataUrl;
+        this.restTemplate = restTemplate;
+    }
 
     public Page<Brand> getBrands(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -62,8 +64,11 @@ public class DeviceService {
             .queryParam("route", "brand-list")
             .toUriString();
         ResponseEntity<DeviceAPIResponseWrapper<List<BrandResponse>>> responseEntity =
-            restTemplate.exchange(url, HttpMethod.GET, null,
-                    new ParameterizedTypeReference<DeviceAPIResponseWrapper<List<BrandResponse>>>() {});
+            restTemplate.exchange(
+                url, 
+                HttpMethod.GET, 
+                null,
+                new ParameterizedTypeReference<DeviceAPIResponseWrapper<List<BrandResponse>>>() {});
         
         List<BrandResponse> brandResponses = responseEntity.getBody().getData();
 
@@ -104,8 +109,11 @@ public class DeviceService {
             .queryParam("route", "device-list")
             .toUriString();
         ResponseEntity<DeviceAPIResponseWrapper<List<BrandResponse>>> responseEntity =
-            restTemplate.exchange(url, HttpMethod.GET, null,
-                    new ParameterizedTypeReference<DeviceAPIResponseWrapper<List<BrandResponse>>>() {});
+            restTemplate.exchange(
+                url, 
+                HttpMethod.GET, 
+                null,
+                new ParameterizedTypeReference<DeviceAPIResponseWrapper<List<BrandResponse>>>() {});
         
         List<BrandResponse> brandResponses = responseEntity.getBody().getData();
 
@@ -150,13 +158,21 @@ public class DeviceService {
         HttpEntity<DeviceRequest> requestEntity = new HttpEntity<>(deviceRequest, headers);
 
         try {
-            ResponseEntity<String> responseEntity = restTemplate.exchange(deviceDataUrl, HttpMethod.POST, requestEntity, String.class);
+            ResponseEntity<String> responseEntity = restTemplate.exchange(
+                deviceDataUrl, 
+                HttpMethod.POST, 
+                requestEntity, 
+                String.class);
             // this API call will always redirect so we need to follow it
-            if(responseEntity.getStatusCode().is3xxRedirection() && responseEntity.getHeaders().getLocation() != null){
+            if(responseEntity.getStatusCode().is3xxRedirection() 
+                && responseEntity.getHeaders().getLocation() != null){
                 URI redirectUrl = responseEntity.getHeaders().getLocation();
                 ResponseEntity<DeviceAPIResponseWrapper<DeviceListResponse>> redirectResponseEntity =
-                    restTemplate.exchange(redirectUrl, HttpMethod.GET, new HttpEntity<>(headers),
-                            new ParameterizedTypeReference<DeviceAPIResponseWrapper<DeviceListResponse>>() {});
+                    restTemplate.exchange(
+                        redirectUrl, 
+                        HttpMethod.GET, 
+                        new HttpEntity<>(headers),
+                        new ParameterizedTypeReference<DeviceAPIResponseWrapper<DeviceListResponse>>() {});
                 
                 DeviceAPIResponseWrapper<DeviceListResponse> responseBody = redirectResponseEntity.getBody();
                 if (responseBody == null || redirectResponseEntity.getStatusCode() != HttpStatus.OK) {
